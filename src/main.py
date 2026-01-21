@@ -12,17 +12,18 @@ import modal
 app = modal.App("ai-deployment-intel")
 
 # Image now includes anthropic, tavily, and firecrawl
+# Note: using 'firecrawl' package (not 'firecrawl-py')
 image = modal.Image.debian_slim(python_version="3.11").pip_install(
     "anthropic>=0.40.0",
     "tavily-python>=0.5.0",
-    "firecrawl-py>=1.0.0",
+    "firecrawl>=1.0.0",  # Updated package name
 )
 
 
 @app.function(
     image=image,
     secrets=[modal.Secret.from_name("firecrawl-secret")],
-    timeout=120,  # Some pages take a while to scrape
+    timeout=120,
 )
 def fetch_content(url: str) -> dict:
     """
@@ -33,20 +34,19 @@ def fetch_content(url: str) -> dict:
     - Removing ads, navigation, footers
     - Extracting main content as clean markdown
     """
-    from firecrawl import FirecrawlApp
+    from firecrawl import Firecrawl
     import os
     
-    client = FirecrawlApp(api_key=os.environ["FIRECRAWL_API_KEY"])
+    # New API: use Firecrawl class (not FirecrawlApp)
+    client = Firecrawl(api_key=os.environ["FIRECRAWL_API_KEY"])
     
     print(f"Fetching: {url}")
     
     try:
-        result = client.scrape_url(
+        # New API: use scrape() method with formats as direct parameter
+        result = client.scrape(
             url=url,
-            params={
-                "formats": ["markdown"],
-                "onlyMainContent": True,  # Skip nav, ads, footers
-            }
+            formats=["markdown"],
         )
         
         markdown_content = result.get("markdown", "")
@@ -78,17 +78,17 @@ def fetch_content(url: str) -> dict:
 @app.function(
     image=image,
     secrets=[modal.Secret.from_name("firecrawl-secret")],
-    timeout=300,  # Longer timeout for multiple fetches
+    timeout=300,
 )
 def fetch_multiple(urls: list[str]) -> dict:
     """
     Fetch content from multiple URLs.
     Returns successful fetches and tracks failures.
     """
-    from firecrawl import FirecrawlApp
+    from firecrawl import Firecrawl
     import os
     
-    client = FirecrawlApp(api_key=os.environ["FIRECRAWL_API_KEY"])
+    client = Firecrawl(api_key=os.environ["FIRECRAWL_API_KEY"])
     
     results = []
     success_count = 0
@@ -98,12 +98,9 @@ def fetch_multiple(urls: list[str]) -> dict:
         print(f"\nFetching: {url[:60]}...")
         
         try:
-            result = client.scrape_url(
+            result = client.scrape(
                 url=url,
-                params={
-                    "formats": ["markdown"],
-                    "onlyMainContent": True,
-                }
+                formats=["markdown"],
             )
             
             markdown_content = result.get("markdown", "")
