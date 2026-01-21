@@ -11,12 +11,11 @@ import modal
 
 app = modal.App("ai-deployment-intel")
 
-# Image now includes anthropic, tavily, and firecrawl
-# Note: using 'firecrawl' package (not 'firecrawl-py')
+# Image includes anthropic, tavily, and firecrawl
 image = modal.Image.debian_slim(python_version="3.11").pip_install(
     "anthropic>=0.40.0",
     "tavily-python>=0.5.0",
-    "firecrawl>=1.0.0",  # Updated package name
+    "firecrawl>=1.0.0",
 )
 
 
@@ -37,29 +36,35 @@ def fetch_content(url: str) -> dict:
     from firecrawl import Firecrawl
     import os
     
-    # New API: use Firecrawl class (not FirecrawlApp)
     client = Firecrawl(api_key=os.environ["FIRECRAWL_API_KEY"])
     
     print(f"Fetching: {url}")
     
     try:
-        # New API: use scrape() method with formats as direct parameter
+        # scrape() returns a Document object, not a dict
         result = client.scrape(
             url=url,
             formats=["markdown"],
         )
         
-        markdown_content = result.get("markdown", "")
-        metadata = result.get("metadata", {})
+        # Access attributes directly on the Document object
+        markdown_content = result.markdown or ""
         
-        print(f"  Title: {metadata.get('title', 'No title')[:60]}")
+        # metadata is also an object, not a dict
+        title = ""
+        description = ""
+        if result.metadata:
+            title = result.metadata.title or ""
+            description = result.metadata.description or ""
+        
+        print(f"  Title: {title[:60]}")
         print(f"  Content length: {len(markdown_content)} characters")
         
         return {
             "url": url,
             "success": True,
-            "title": metadata.get("title", ""),
-            "description": metadata.get("description", ""),
+            "title": title,
+            "description": description,
             "content": markdown_content,
             "content_length": len(markdown_content),
         }
@@ -103,13 +108,15 @@ def fetch_multiple(urls: list[str]) -> dict:
                 formats=["markdown"],
             )
             
-            markdown_content = result.get("markdown", "")
-            metadata = result.get("metadata", {})
+            markdown_content = result.markdown or ""
+            title = ""
+            if result.metadata:
+                title = result.metadata.title or ""
             
             results.append({
                 "url": url,
                 "success": True,
-                "title": metadata.get("title", ""),
+                "title": title,
                 "content": markdown_content,
                 "content_length": len(markdown_content),
             })
