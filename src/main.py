@@ -1,14 +1,15 @@
 """
-AI Deployment Intelligence Agent - Step 6: Storage Layer
-=========================================================
-Building on Step 5, we now add:
-1. Supabase integration to store evaluated content
-2. Persistence for discovered deployment stories
-3. Deduplication via unique URL constraint
+AI Deployment Intelligence Agent - Step 7: Static Site Generation
+==================================================================
+Building on Step 6, we now add:
+1. Generate a static HTML page from Supabase data
+2. Clean, readable design for deployment stories
+3. Ready to push to GitHub Pages
 """
 
 import modal
 import json
+from datetime import datetime
 
 app = modal.App("ai-deployment-intel")
 
@@ -19,6 +20,319 @@ image = modal.Image.debian_slim(python_version="3.11").pip_install(
     "supabase>=2.0.0",
 )
 
+
+@app.function(
+    image=image,
+    secrets=[modal.Secret.from_name("supabase-secret")],
+)
+def generate_site(min_quality: int = 5) -> dict:
+    """
+    Generate a static HTML site from stored deployments.
+    Returns the HTML content ready to be saved/pushed.
+    """
+    from supabase import create_client
+    import os
+    
+    supabase = create_client(
+        os.environ["SUPABASE_URL"],
+        os.environ["SUPABASE_KEY"]
+    )
+    
+    # Fetch all quality deployments
+    print("Fetching deployments from Supabase...")
+    result = supabase.table("deployments")\
+        .select("*")\
+        .eq("is_deployment_story", True)\
+        .gte("quality_score", min_quality)\
+        .order("quality_score", desc=True)\
+        .execute()
+    
+    deployments = result.data
+    print(f"Found {len(deployments)} deployments")
+    
+    # Generate HTML
+    html = generate_html(deployments)
+    
+    return {
+        "success": True,
+        "deployment_count": len(deployments),
+        "html": html,
+        "generated_at": datetime.utcnow().isoformat(),
+    }
+
+
+def generate_html(deployments: list) -> str:
+    """Generate the HTML page content."""
+    
+    generated_date = datetime.utcnow().strftime("%B %d, %Y")
+    
+    # Build deployment cards
+    cards_html = ""
+    for d in deployments:
+        company = d.get("company") or "Unknown Company"
+        use_case = d.get("use_case") or "AI Deployment"
+        url = d.get("url", "#")
+        title = d.get("title") or use_case
+        quality = d.get("quality_score", 0)
+        stage = d.get("deployment_stage", "unknown")
+        
+        # Technology tags
+        tech_stack = d.get("technology_stack", [])
+        if isinstance(tech_stack, str):
+            tech_stack = json.loads(tech_stack) if tech_stack else []
+        tech_tags = "".join(f'<span class="tag">{tech}</span>' for tech in tech_stack[:5])
+        
+        # Results list
+        results = d.get("results", [])
+        if isinstance(results, str):
+            results = json.loads(results) if results else []
+        results_html = ""
+        if results:
+            results_items = "".join(f"<li>{r}</li>" for r in results[:3])
+            results_html = f'<ul class="results">{results_items}</ul>'
+        
+        # Lessons learned
+        lessons = d.get("lessons_learned", [])
+        if isinstance(lessons, str):
+            lessons = json.loads(lessons) if lessons else []
+        lessons_html = ""
+        if lessons:
+            lessons_html = f'<p class="lesson">💡 {lessons[0][:150]}{"..." if len(lessons[0]) > 150 else ""}</p>'
+        
+        cards_html += f'''
+        <article class="card">
+            <div class="card-header">
+                <span class="company">{company}</span>
+                <span class="quality">Score: {quality}/10</span>
+            </div>
+            <h2><a href="{url}" target="_blank" rel="noopener">{title[:100]}{"..." if len(title) > 100 else ""}</a></h2>
+            <p class="use-case">{use_case}</p>
+            {results_html}
+            {lessons_html}
+            <div class="tags">
+                {tech_tags}
+                <span class="tag stage">{stage}</span>
+            </div>
+        </article>
+        '''
+    
+    # If no deployments, show a message
+    if not cards_html:
+        cards_html = '''
+        <div class="empty-state">
+            <p>No deployment stories found yet. Check back soon!</p>
+        </div>
+        '''
+    
+    html = f'''<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Deployment Intel - Real-World AI Case Studies</title>
+    <meta name="description" content="Curated collection of real-world AI and LLM deployment case studies, lessons learned, and production insights.">
+    <style>
+        * {{
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }}
+        
+        body {{
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: #0f0f0f;
+            color: #e0e0e0;
+            line-height: 1.6;
+            min-height: 100vh;
+        }}
+        
+        .container {{
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 2rem 1rem;
+        }}
+        
+        header {{
+            text-align: center;
+            margin-bottom: 3rem;
+            padding-bottom: 2rem;
+            border-bottom: 1px solid #2a2a2a;
+        }}
+        
+        h1 {{
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }}
+        
+        .subtitle {{
+            color: #888;
+            font-size: 1.1rem;
+        }}
+        
+        .stats {{
+            margin-top: 1rem;
+            font-size: 0.9rem;
+            color: #666;
+        }}
+        
+        .card {{
+            background: #1a1a1a;
+            border: 1px solid #2a2a2a;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            transition: border-color 0.2s;
+        }}
+        
+        .card:hover {{
+            border-color: #667eea;
+        }}
+        
+        .card-header {{
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.75rem;
+        }}
+        
+        .company {{
+            font-weight: 600;
+            color: #667eea;
+        }}
+        
+        .quality {{
+            font-size: 0.85rem;
+            color: #888;
+            background: #252525;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+        }}
+        
+        .card h2 {{
+            font-size: 1.25rem;
+            margin-bottom: 0.5rem;
+        }}
+        
+        .card h2 a {{
+            color: #fff;
+            text-decoration: none;
+        }}
+        
+        .card h2 a:hover {{
+            color: #667eea;
+        }}
+        
+        .use-case {{
+            color: #aaa;
+            margin-bottom: 1rem;
+        }}
+        
+        .results {{
+            background: #151515;
+            border-left: 3px solid #4ade80;
+            padding: 0.75rem 1rem;
+            margin-bottom: 1rem;
+            list-style: none;
+        }}
+        
+        .results li {{
+            color: #4ade80;
+            font-size: 0.95rem;
+            padding: 0.25rem 0;
+        }}
+        
+        .results li::before {{
+            content: "✓ ";
+        }}
+        
+        .lesson {{
+            font-style: italic;
+            color: #f59e0b;
+            font-size: 0.95rem;
+            margin-bottom: 1rem;
+        }}
+        
+        .tags {{
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }}
+        
+        .tag {{
+            font-size: 0.8rem;
+            padding: 0.25rem 0.75rem;
+            background: #252525;
+            border-radius: 20px;
+            color: #888;
+        }}
+        
+        .tag.stage {{
+            background: #1e3a5f;
+            color: #60a5fa;
+        }}
+        
+        .empty-state {{
+            text-align: center;
+            padding: 4rem 2rem;
+            color: #666;
+        }}
+        
+        footer {{
+            text-align: center;
+            margin-top: 3rem;
+            padding-top: 2rem;
+            border-top: 1px solid #2a2a2a;
+            color: #666;
+            font-size: 0.9rem;
+        }}
+        
+        footer a {{
+            color: #667eea;
+            text-decoration: none;
+        }}
+        
+        @media (max-width: 600px) {{
+            h1 {{
+                font-size: 1.75rem;
+            }}
+            
+            .card {{
+                padding: 1rem;
+            }}
+        }}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🤖 AI Deployment Intel</h1>
+            <p class="subtitle">Real-world AI deployment case studies and lessons learned</p>
+            <p class="stats">{len(deployments)} stories • Updated {generated_date}</p>
+        </header>
+        
+        <main>
+            {cards_html}
+        </main>
+        
+        <footer>
+            <p>Curated by an AI agent • Data sourced from engineering blogs and case studies</p>
+            <p style="margin-top: 0.5rem;">
+                <a href="https://github.com/pathak-r/ai-deployment-intel" target="_blank">View on GitHub</a>
+            </p>
+        </footer>
+    </div>
+</body>
+</html>'''
+    
+    return html
+
+
+# ============ Previous functions (Steps 2-6) ============
 
 @app.function(
     image=image,
@@ -39,17 +353,11 @@ def store_deployment(
     lessons_learned: list = None,
     content_snippet: str = "",
 ) -> dict:
-    """
-    Store a deployment story in Supabase.
-    Individual parameters instead of dict for Modal UI compatibility.
-    """
+    """Store a deployment story in Supabase."""
     from supabase import create_client
     import os
     
-    supabase = create_client(
-        os.environ["SUPABASE_URL"],
-        os.environ["SUPABASE_KEY"]
-    )
+    supabase = create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_KEY"])
     
     if not url:
         return {"success": False, "error": "No URL provided"}
@@ -70,19 +378,10 @@ def store_deployment(
         "content_snippet": content_snippet[:2000] if content_snippet else "",
     }
     
-    print(f"Storing: {url[:60]}...")
-    
     try:
-        result = supabase.table("deployments").upsert(
-            record,
-            on_conflict="url"
-        ).execute()
-        
-        print(f"  ✓ Stored successfully")
+        supabase.table("deployments").upsert(record, on_conflict="url").execute()
         return {"success": True, "url": url}
-        
     except Exception as e:
-        print(f"  ✗ Storage error: {e}")
         return {"success": False, "error": str(e), "url": url}
 
 
@@ -95,12 +394,7 @@ def get_deployments(min_quality: int = 5, limit: int = 50) -> dict:
     from supabase import create_client
     import os
     
-    supabase = create_client(
-        os.environ["SUPABASE_URL"],
-        os.environ["SUPABASE_KEY"]
-    )
-    
-    print(f"Fetching deployments (min quality: {min_quality}, limit: {limit})...")
+    supabase = create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_KEY"])
     
     try:
         result = supabase.table("deployments")\
@@ -111,17 +405,8 @@ def get_deployments(min_quality: int = 5, limit: int = 50) -> dict:
             .limit(limit)\
             .execute()
         
-        deployments = result.data
-        print(f"  ✓ Found {len(deployments)} deployments")
-        
-        return {
-            "success": True,
-            "count": len(deployments),
-            "deployments": deployments,
-        }
-        
+        return {"success": True, "count": len(result.data), "deployments": result.data}
     except Exception as e:
-        print(f"  ✗ Fetch error: {e}")
         return {"success": False, "error": str(e), "deployments": []}
 
 
@@ -136,107 +421,59 @@ def get_deployments(min_quality: int = 5, limit: int = 50) -> dict:
     timeout=300,
 )
 def run_pipeline(query: str = "LLM deployment case study production", max_results: int = 2) -> dict:
-    """
-    Run the full pipeline: search → fetch → evaluate → store.
-    This is testable from Modal's "Try It" UI.
-    """
+    """Run the full pipeline: search → fetch → evaluate → store."""
     from tavily import TavilyClient
     from firecrawl import Firecrawl
     from anthropic import Anthropic
     from supabase import create_client
     import os
     
-    stats = {
-        "searched": 0,
-        "fetched": 0,
-        "evaluated": 0,
-        "stored": 0,
-        "errors": [],
-    }
+    stats = {"searched": 0, "fetched": 0, "evaluated": 0, "stored": 0, "errors": []}
     
-    print("=" * 60)
-    print("AI Deployment Intel - Full Pipeline Run")
-    print("=" * 60)
-    
-    # Initialize clients
     tavily = TavilyClient(api_key=os.environ["TAVILY_API_KEY"])
     firecrawl = Firecrawl(api_key=os.environ["FIRECRAWL_API_KEY"])
     anthropic = Anthropic()
     supabase = create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_KEY"])
     
-    # Step 1: Search
-    print(f"\n[1/4] Searching: {query}")
+    # Search
     try:
         search_response = tavily.search(query=query, search_depth="advanced", max_results=max_results)
         search_results = search_response.get("results", [])
         stats["searched"] = len(search_results)
-        print(f"  Found {len(search_results)} results")
     except Exception as e:
         stats["errors"].append(f"Search error: {e}")
         return stats
     
-    # Process each result
     for item in search_results:
         url = item.get("url", "")
         title = item.get("title", "")
         
-        print(f"\n{'─' * 40}")
-        print(f"Processing: {title[:50]}...")
-        
-        # Step 2: Fetch
-        print(f"  [2/4] Fetching...")
+        # Fetch
         try:
             fetch_result = firecrawl.scrape(url=url, formats=["markdown"])
             content = fetch_result.markdown or ""
             if fetch_result.metadata:
                 title = fetch_result.metadata.title or title
             stats["fetched"] += 1
-            print(f"    Got {len(content)} chars")
         except Exception as e:
             stats["errors"].append(f"Fetch error for {url}: {e}")
-            print(f"    ✗ Fetch failed: {e}")
             continue
         
         if len(content) < 300:
-            print(f"    ✗ Content too short, skipping")
             continue
         
-        # Step 3: Evaluate
-        print(f"  [3/4] Evaluating...")
+        # Evaluate
         try:
             content_truncated = content[:12000]
-            
-            evaluation_prompt = f"""Analyze this content and determine if it describes a real-world AI/LLM deployment or case study.
+            evaluation_prompt = f"""Analyze this content and determine if it describes a real-world AI/LLM deployment.
 
 URL: {url}
 TITLE: {title}
-
 CONTENT:
 {content_truncated}
 
-Evaluate based on these criteria:
-1. SPECIFICITY: Does it name a real company and describe concrete implementation details?
-2. PRACTITIONER VOICE: Is it written by someone who built/deployed the system?
-3. DEPLOYMENT EVIDENCE: Is this in production (not just a POC or announcement)?
-4. QUANTIFIED RESULTS: Are there metrics, percentages, or measurable outcomes?
-5. LESSONS LEARNED: Does it share what went wrong or what they'd do differently?
-
-Respond with a JSON object (no markdown, just raw JSON):
-{{
-    "is_deployment_story": true or false,
-    "confidence": 0.0 to 1.0,
-    "reason": "Brief explanation",
-    "company": "Company name or null",
-    "use_case": "Brief description (1-2 sentences)",
-    "technology_stack": ["List", "of", "technologies"],
-    "results": ["Quantified outcomes"],
-    "lessons_learned": ["Key learnings"],
-    "deployment_stage": "production" or "pilot" or "poc" or "unknown",
-    "content_type": "blog_post" or "case_study" or "talk_transcript" or "other",
-    "quality_score": 1 to 10
-}}
-
-Be strict. Only return valid JSON."""
+Respond with JSON only:
+{{"is_deployment_story": bool, "confidence": 0-1, "reason": "string", "company": "string or null", "use_case": "string", "technology_stack": [], "results": [], "lessons_learned": [], "deployment_stage": "production/pilot/poc/unknown", "content_type": "blog_post/case_study/other", "quality_score": 1-10}}"""
 
             response = anthropic.messages.create(
                 model="claude-sonnet-4-20250514",
@@ -245,27 +482,21 @@ Be strict. Only return valid JSON."""
             )
             
             response_text = response.content[0].text.strip()
-            if response_text.startswith("```"):
-                response_text = response_text.split("```")[1]
-                if response_text.startswith("json"):
-                    response_text = response_text[4:]
-            response_text = response_text.strip()
+            if "```" in response_text:
+                response_text = response_text.split("```")[1].replace("json", "").strip()
             
             evaluation = json.loads(response_text)
             stats["evaluated"] += 1
             
             is_story = evaluation.get("is_deployment_story", False)
             quality = evaluation.get("quality_score", 0)
-            print(f"    Is deployment story: {is_story}, Quality: {quality}")
             
         except Exception as e:
             stats["errors"].append(f"Evaluation error for {url}: {e}")
-            print(f"    ✗ Evaluation failed: {e}")
             continue
         
-        # Step 4: Store (only quality stories)
+        # Store
         if is_story and quality >= 5:
-            print(f"  [4/4] Storing...")
             try:
                 record = {
                     "url": url,
@@ -282,26 +513,10 @@ Be strict. Only return valid JSON."""
                     "lessons_learned": evaluation.get("lessons_learned", []),
                     "content_snippet": content[:2000],
                 }
-                
                 supabase.table("deployments").upsert(record, on_conflict="url").execute()
                 stats["stored"] += 1
-                print(f"    ✓ Stored!")
-                
             except Exception as e:
                 stats["errors"].append(f"Storage error for {url}: {e}")
-                print(f"    ✗ Storage failed: {e}")
-        else:
-            print(f"  [4/4] Skipping storage (quality too low or not a deployment story)")
-    
-    print(f"\n{'=' * 60}")
-    print(f"Pipeline complete!")
-    print(f"  Searched: {stats['searched']}")
-    print(f"  Fetched: {stats['fetched']}")
-    print(f"  Evaluated: {stats['evaluated']}")
-    print(f"  Stored: {stats['stored']}")
-    if stats["errors"]:
-        print(f"  Errors: {len(stats['errors'])}")
-    print("=" * 60)
     
     return stats
 
@@ -314,6 +529,11 @@ def hello():
 
 @app.local_entrypoint()
 def main():
-    """Run pipeline from command line."""
-    result = run_pipeline.remote()
-    print(json.dumps(result, indent=2))
+    """Generate the static site."""
+    result = generate_site.remote()
+    print(f"Generated site with {result['deployment_count']} deployments")
+    
+    # Save locally for preview
+    with open("index.html", "w") as f:
+        f.write(result["html"])
+    print("Saved to index.html")
