@@ -1,10 +1,10 @@
 """
-AI Deployment Intelligence Agent - Step 5: Evaluate Layer
-==========================================================
-Building on Step 4, we now add:
-1. Claude-powered content evaluation
-2. Structured data extraction from articles
-3. Quality scoring to filter signal from noise
+AI Deployment Intelligence Agent - Step 6: Storage Layer
+=========================================================
+Building on Step 5, we now add:
+1. Supabase integration to store evaluated content
+2. Persistence for discovered deployment stories
+3. Deduplication via unique URL constraint
 """
 
 import modal
@@ -16,8 +16,110 @@ image = modal.Image.debian_slim(python_version="3.11").pip_install(
     "anthropic>=0.40.0",
     "tavily-python>=0.5.0",
     "firecrawl>=1.0.0",
+    "supabase>=2.0.0",
 )
 
+
+@app.function(
+    image=image,
+    secrets=[modal.Secret.from_name("supabase-secret")],
+)
+def store_deployment(evaluation: dict, content_snippet: str = "") -> dict:
+    """
+    Store an evaluated deployment story in Supabase.
+    
+    Uses upsert to handle duplicates (same URL = update existing).
+    """
+    from supabase import create_client
+    import os
+    
+    supabase = create_client(
+        os.environ["SUPABASE_URL"],
+        os.environ["SUPABASE_KEY"]
+    )
+    
+    url = evaluation.get("url", "")
+    if not url:
+        return {"success": False, "error": "No URL provided"}
+    
+    # Prepare the record
+    record = {
+        "url": url,
+        "title": evaluation.get("title", ""),
+        "company": evaluation.get("company"),
+        "use_case": evaluation.get("use_case"),
+        "is_deployment_story": evaluation.get("is_deployment_story", False),
+        "confidence": evaluation.get("confidence"),
+        "quality_score": evaluation.get("quality_score"),
+        "deployment_stage": evaluation.get("deployment_stage"),
+        "content_type": evaluation.get("content_type"),
+        "technology_stack": evaluation.get("technology_stack", []),
+        "results": evaluation.get("results", []),
+        "lessons_learned": evaluation.get("lessons_learned", []),
+        "content_snippet": content_snippet[:2000] if content_snippet else "",
+    }
+    
+    print(f"Storing: {url[:60]}...")
+    
+    try:
+        # Upsert: insert or update if URL exists
+        result = supabase.table("deployments").upsert(
+            record,
+            on_conflict="url"
+        ).execute()
+        
+        print(f"  ✓ Stored successfully")
+        return {"success": True, "url": url}
+        
+    except Exception as e:
+        print(f"  ✗ Storage error: {e}")
+        return {"success": False, "error": str(e), "url": url}
+
+
+@app.function(
+    image=image,
+    secrets=[modal.Secret.from_name("supabase-secret")],
+)
+def get_deployments(min_quality: int = 5, limit: int = 50) -> dict:
+    """
+    Retrieve stored deployment stories from Supabase.
+    
+    Filters by quality score and returns newest first.
+    """
+    from supabase import create_client
+    import os
+    
+    supabase = create_client(
+        os.environ["SUPABASE_URL"],
+        os.environ["SUPABASE_KEY"]
+    )
+    
+    print(f"Fetching deployments (min quality: {min_quality}, limit: {limit})...")
+    
+    try:
+        result = supabase.table("deployments")\
+            .select("*")\
+            .eq("is_deployment_story", True)\
+            .gte("quality_score", min_quality)\
+            .order("created_at", desc=True)\
+            .limit(limit)\
+            .execute()
+        
+        deployments = result.data
+        print(f"  ✓ Found {len(deployments)} deployments")
+        
+        return {
+            "success": True,
+            "count": len(deployments),
+            "deployments": deployments,
+        }
+        
+    except Exception as e:
+        print(f"  ✗ Fetch error: {e}")
+        return {"success": False, "error": str(e), "deployments": []}
+
+
+# ============ Previous functions (Steps 2-5) ============
 
 @app.function(
     image=image,
@@ -25,19 +127,11 @@ image = modal.Image.debian_slim(python_version="3.11").pip_install(
     timeout=120,
 )
 def evaluate_content(content: str, url: str = "", title: str = "") -> dict:
-    """
-    Use Claude to evaluate if content is a real AI deployment case study.
-    
-    Returns structured evaluation with:
-    - is_deployment_story: bool
-    - company, use_case, results, lessons_learned
-    - quality_score: 1-10
-    """
+    """Use Claude to evaluate if content is a real AI deployment case study."""
     from anthropic import Anthropic
     
     client = Anthropic()
     
-    # Don't evaluate if content is too short
     if not content or len(content) < 300:
         return {
             "url": url,
@@ -46,11 +140,9 @@ def evaluate_content(content: str, url: str = "", title: str = "") -> dict:
             "quality_score": 0,
         }
     
-    # Truncate very long content to save tokens
     content_truncated = content[:12000] if len(content) > 12000 else content
     
     print(f"Evaluating: {title[:60] or url[:60]}...")
-    print(f"  Content length: {len(content_truncated)} chars")
     
     evaluation_prompt = f"""Analyze this content and determine if it describes a real-world AI/LLM deployment or case study.
 
@@ -94,7 +186,6 @@ Only return valid JSON, nothing else."""
         
         response_text = response.content[0].text.strip()
         
-        # Clean up response if it has markdown code blocks
         if response_text.startswith("```json"):
             response_text = response_text[7:]
         if response_text.startswith("```"):
@@ -103,40 +194,22 @@ Only return valid JSON, nothing else."""
             response_text = response_text[:-3]
         response_text = response_text.strip()
         
-        # Parse JSON
         evaluation = json.loads(response_text)
         evaluation["url"] = url
         evaluation["title"] = title
         
-        # Log result
         if evaluation.get("is_deployment_story"):
             print(f"  ✓ IS deployment story (score: {evaluation.get('quality_score', 'N/A')})")
-            print(f"    Company: {evaluation.get('company', 'Unknown')}")
-            print(f"    Use case: {evaluation.get('use_case', 'N/A')[:60]}...")
         else:
             print(f"  ✗ NOT a deployment story: {evaluation.get('reason', 'No reason')[:60]}")
         
         return evaluation
         
     except json.JSONDecodeError as e:
-        print(f"  ✗ JSON parse error: {e}")
-        return {
-            "url": url,
-            "is_deployment_story": False,
-            "reason": f"Failed to parse evaluation response: {e}",
-            "quality_score": 0,
-        }
+        return {"url": url, "is_deployment_story": False, "reason": f"JSON parse error: {e}", "quality_score": 0}
     except Exception as e:
-        print(f"  ✗ Evaluation error: {e}")
-        return {
-            "url": url,
-            "is_deployment_story": False,
-            "reason": f"Evaluation failed: {e}",
-            "quality_score": 0,
-        }
+        return {"url": url, "is_deployment_story": False, "reason": f"Evaluation failed: {e}", "quality_score": 0}
 
-
-# ============ Previous functions (Steps 2-4) ============
 
 @app.function(
     image=image,
@@ -175,13 +248,7 @@ def fetch_content(url: str) -> dict:
         }
     except Exception as e:
         print(f"  Error fetching {url}: {e}")
-        return {
-            "url": url,
-            "success": False,
-            "error": str(e),
-            "content": "",
-            "content_length": 0,
-        }
+        return {"url": url, "success": False, "error": str(e), "content": "", "content_length": 0}
 
 
 @app.function(
@@ -197,11 +264,7 @@ def search_deployments(query: str, max_results: int = 5) -> dict:
     
     print(f"Searching for: {query}")
     
-    response = client.search(
-        query=query,
-        search_depth="advanced",
-        max_results=max_results,
-    )
+    response = client.search(query=query, search_depth="advanced", max_results=max_results)
     
     results = []
     for item in response.get("results", []):
@@ -212,11 +275,7 @@ def search_deployments(query: str, max_results: int = 5) -> dict:
         })
         print(f"  Found: {item.get('title', 'No title')[:60]}...")
     
-    return {
-        "query": query,
-        "num_results": len(results),
-        "results": results,
-    }
+    return {"query": query, "num_results": len(results), "results": results}
 
 
 @app.function()
@@ -227,32 +286,52 @@ def hello():
 
 @app.local_entrypoint()
 def main():
-    """Test the full search → fetch → evaluate flow."""
+    """Test the full pipeline: search → fetch → evaluate → store."""
     print("=" * 60)
-    print("AI Deployment Intel - Step 5: Evaluate Layer Test")
+    print("AI Deployment Intel - Step 6: Full Pipeline Test")
     print("=" * 60)
     
-    # Test with a known good URL
-    test_url = "https://www.zenml.io/blog/llmops-in-production-457-case-studies-of-what-actually-works"
+    # Step 1: Search
+    print("\n[1/4] Searching...")
+    search_result = search_deployments.remote("LLM deployment case study production", max_results=2)
     
-    # Fetch content
-    print(f"\n[1] Fetching content...")
-    fetch_result = fetch_content.remote(test_url)
+    if search_result["num_results"] == 0:
+        print("No results found")
+        return
+    
+    # Process first result
+    first_result = search_result["results"][0]
+    url = first_result["url"]
+    
+    # Step 2: Fetch
+    print(f"\n[2/4] Fetching: {url[:50]}...")
+    fetch_result = fetch_content.remote(url)
     
     if not fetch_result["success"]:
         print(f"Fetch failed: {fetch_result.get('error')}")
         return
     
-    # Evaluate content
-    print(f"\n[2] Evaluating content...")
+    # Step 3: Evaluate
+    print(f"\n[3/4] Evaluating...")
     evaluation = evaluate_content.remote(
         content=fetch_result["content"],
-        url=test_url,
+        url=url,
         title=fetch_result["title"],
     )
     
-    # Show results
+    # Step 4: Store (only if it's a deployment story)
+    print(f"\n[4/4] Storing...")
+    if evaluation.get("is_deployment_story") and evaluation.get("quality_score", 0) >= 5:
+        store_result = store_deployment.remote(
+            evaluation=evaluation,
+            content_snippet=fetch_result["content"][:2000],
+        )
+        print(f"Store result: {store_result}")
+    else:
+        print(f"Skipping storage - not a quality deployment story")
+        print(f"  Reason: {evaluation.get('reason', 'N/A')}")
+    
+    # Show final evaluation
     print(f"\n{'=' * 60}")
-    print("EVALUATION RESULT:")
-    print(f"{'=' * 60}")
+    print("EVALUATION:")
     print(json.dumps(evaluation, indent=2))
