@@ -105,12 +105,14 @@ def publish_site(min_quality: int = 5) -> dict:
 
         try:
             # Clone the repo
-            subprocess.run(
+            print("Cloning repository...")
+            result = subprocess.run(
                 ["git", "clone", "--depth", "1", repo_url, tmpdir],
-                check=True,
                 capture_output=True,
                 text=True,
             )
+            if result.returncode != 0:
+                return {"success": False, "error": f"Git clone failed: {result.stderr}"}
 
             # Create docs directory
             docs_dir = Path(tmpdir) / "docs"
@@ -133,6 +135,23 @@ def publish_site(min_quality: int = 5) -> dict:
                 check=True,
             )
 
+            # Check if there are any changes
+            status_result = subprocess.run(
+                ["git", "status", "--porcelain"],
+                cwd=tmpdir,
+                capture_output=True,
+                text=True,
+            )
+
+            if not status_result.stdout.strip():
+                print("No changes detected - site is already up to date")
+                return {
+                    "success": True,
+                    "deployment_count": deployment_count,
+                    "commit_message": "No changes",
+                    "site_url": "https://pathak-r.github.io/ai-deployment-intel/",
+                }
+
             # Add, commit, and push
             subprocess.run(["git", "add", "docs/index.html"], cwd=tmpdir, check=True)
 
@@ -145,12 +164,15 @@ def publish_site(min_quality: int = 5) -> dict:
             )
 
             print("Pushing to GitHub...")
-            subprocess.run(
+            push_result = subprocess.run(
                 ["git", "push", "origin", "main"],
                 cwd=tmpdir,
-                check=True,
                 capture_output=True,
+                text=True,
             )
+
+            if push_result.returncode != 0:
+                return {"success": False, "error": f"Git push failed: {push_result.stderr}"}
 
             print("Successfully pushed to GitHub!")
             return {
@@ -161,11 +183,13 @@ def publish_site(min_quality: int = 5) -> dict:
             }
 
         except subprocess.CalledProcessError as e:
-            error_msg = f"Git operation failed: {e.stderr if hasattr(e, 'stderr') else str(e)}"
+            error_msg = f"Git command failed: {e.cmd}. Error: {e.stderr if e.stderr else e.stdout}"
             print(error_msg)
             return {"success": False, "error": error_msg}
         except Exception as e:
-            return {"success": False, "error": str(e)}
+            error_msg = f"Unexpected error: {str(e)}"
+            print(error_msg)
+            return {"success": False, "error": error_msg}
 
 
 def generate_html(deployments: list) -> str:
