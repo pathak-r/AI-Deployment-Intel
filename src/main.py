@@ -61,6 +61,109 @@ def generate_site(min_quality: int = 5) -> dict:
     }
 
 
+@app.function(
+    image=image,
+    secrets=[
+        modal.Secret.from_name("supabase-secret"),
+        modal.Secret.from_name("github-secret"),
+    ],
+    timeout=300,
+)
+def publish_site(min_quality: int = 5) -> dict:
+    """
+    Generate the static site and push it to GitHub Pages.
+    Clones repo, generates HTML, commits to /docs, and pushes.
+    """
+    import os
+    import tempfile
+    import subprocess
+    from pathlib import Path
+
+    github_token = os.environ.get("GITHUB_TOKEN")
+    if not github_token:
+        return {"success": False, "error": "GITHUB_TOKEN not found in secrets"}
+
+    repo_url = f"https://{github_token}@github.com/pathak-r/ai-deployment-intel.git"
+
+    # Generate the site HTML
+    print("Generating site HTML...")
+    site_result = generate_site.local(min_quality=min_quality)
+
+    if not site_result.get("success"):
+        return {"success": False, "error": "Failed to generate site"}
+
+    html_content = site_result["html"]
+    deployment_count = site_result["deployment_count"]
+
+    # Use temporary directory for git operations
+    with tempfile.TemporaryDirectory() as tmpdir:
+        print(f"Cloning repository to {tmpdir}...")
+
+        try:
+            # Clone the repo
+            subprocess.run(
+                ["git", "clone", "--depth", "1", repo_url, tmpdir],
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+
+            # Create docs directory
+            docs_dir = Path(tmpdir) / "docs"
+            docs_dir.mkdir(exist_ok=True)
+
+            # Write HTML file
+            index_path = docs_dir / "index.html"
+            index_path.write_text(html_content)
+            print(f"Wrote {len(html_content)} bytes to docs/index.html")
+
+            # Configure git
+            subprocess.run(
+                ["git", "config", "user.name", "AI Deployment Agent"],
+                cwd=tmpdir,
+                check=True,
+            )
+            subprocess.run(
+                ["git", "config", "user.email", "bot@ai-deployment-intel.com"],
+                cwd=tmpdir,
+                check=True,
+            )
+
+            # Add, commit, and push
+            subprocess.run(["git", "add", "docs/index.html"], cwd=tmpdir, check=True)
+
+            commit_msg = f"Update site - {deployment_count} deployments - {datetime.utcnow().strftime('%Y-%m-%d')}"
+            subprocess.run(
+                ["git", "commit", "-m", commit_msg],
+                cwd=tmpdir,
+                check=True,
+                capture_output=True,
+            )
+
+            print("Pushing to GitHub...")
+            subprocess.run(
+                ["git", "push", "origin", "main"],
+                cwd=tmpdir,
+                check=True,
+                capture_output=True,
+            )
+
+            print("Successfully pushed to GitHub!")
+            return {
+                "success": True,
+                "deployment_count": deployment_count,
+                "commit_message": commit_msg,
+                "site_url": "https://pathak-r.github.io/ai-deployment-intel/",
+            }
+
+        except subprocess.CalledProcessError as e:
+            error_msg = f"Git operation failed: {e.stderr if hasattr(e, 'stderr') else str(e)}"
+            print(error_msg)
+            return {"success": False, "error": error_msg}
+        except Exception as e:
+            return {"success": False, "error": str(e)}
+
+
 def generate_html(deployments: list) -> str:
     """Generate the HTML page content."""
     
@@ -529,11 +632,12 @@ def hello():
 
 @app.local_entrypoint()
 def main():
-    """Generate the static site."""
-    result = generate_site.remote()
-    print(f"Generated site with {result['deployment_count']} deployments")
-    
-    # Save locally for preview
-    with open("index.html", "w") as f:
-        f.write(result["html"])
-    print("Saved to index.html")
+    """Generate the static site and publish to GitHub Pages."""
+    result = publish_site.remote()
+
+    if result.get("success"):
+        print(f"✓ Successfully published {result['deployment_count']} deployments")
+        print(f"✓ Commit: {result['commit_message']}")
+        print(f"✓ Site URL: {result['site_url']}")
+    else:
+        print(f"✗ Failed to publish site: {result.get('error')}")
