@@ -661,27 +661,27 @@ def run_pipeline(num_queries: int = 3, results_per_query: int = 10, min_quality:
             continue
 
         for item in search_results:
-        url = item.get("url", "")
-        title = item.get("title", "")
-        
-        # Fetch
-        try:
-            fetch_result = firecrawl.scrape(url=url, formats=["markdown"])
-            content = fetch_result.markdown or ""
-            if fetch_result.metadata:
-                title = fetch_result.metadata.title or title
-            stats["fetched"] += 1
-        except Exception as e:
-            stats["errors"].append(f"Fetch error for {url}: {e}")
-            continue
-        
-        if len(content) < 300:
-            continue
-        
-        # Evaluate
-        try:
-            content_truncated = content[:12000]
-            evaluation_prompt = f"""Analyze this content and determine if it describes a real-world AI/LLM deployment.
+            url = item.get("url", "")
+            title = item.get("title", "")
+
+            # Fetch
+            try:
+                fetch_result = firecrawl.scrape(url=url, formats=["markdown"])
+                content = fetch_result.markdown or ""
+                if fetch_result.metadata:
+                    title = fetch_result.metadata.title or title
+                stats["fetched"] += 1
+            except Exception as e:
+                stats["errors"].append(f"Fetch error for {url}: {e}")
+                continue
+
+            if len(content) < 300:
+                continue
+
+            # Evaluate
+            try:
+                content_truncated = content[:12000]
+                evaluation_prompt = f"""Analyze this content and determine if it describes a real-world AI/LLM deployment.
 
 URL: {url}
 TITLE: {title}
@@ -691,48 +691,48 @@ CONTENT:
 Respond with JSON only:
 {{"is_deployment_story": bool, "confidence": 0-1, "reason": "string", "company": "string or null", "use_case": "string", "technology_stack": [], "results": [], "lessons_learned": [], "deployment_stage": "production/pilot/poc/unknown", "content_type": "blog_post/case_study/other", "quality_score": 1-10}}"""
 
-            response = anthropic.messages.create(
-                model="claude-sonnet-4-20250514",
-                max_tokens=1500,
-                messages=[{"role": "user", "content": evaluation_prompt}]
-            )
-            
-            response_text = response.content[0].text.strip()
-            if "```" in response_text:
-                response_text = response_text.split("```")[1].replace("json", "").strip()
-            
-            evaluation = json.loads(response_text)
-            stats["evaluated"] += 1
-            
-            is_story = evaluation.get("is_deployment_story", False)
-            quality = evaluation.get("quality_score", 0)
-            
-        except Exception as e:
-            stats["errors"].append(f"Evaluation error for {url}: {e}")
-            continue
-        
-        # Store
-        if is_story and quality >= min_quality:
-            try:
-                record = {
-                    "url": url,
-                    "title": title,
-                    "company": evaluation.get("company"),
-                    "use_case": evaluation.get("use_case"),
-                    "is_deployment_story": True,
-                    "confidence": evaluation.get("confidence"),
-                    "quality_score": quality,
-                    "deployment_stage": evaluation.get("deployment_stage"),
-                    "content_type": evaluation.get("content_type"),
-                    "technology_stack": evaluation.get("technology_stack", []),
-                    "results": evaluation.get("results", []),
-                    "lessons_learned": evaluation.get("lessons_learned", []),
-                    "content_snippet": content[:2000],
-                }
-                supabase.table("deployments").upsert(record, on_conflict="url").execute()
-                stats["stored"] += 1
+                response = anthropic.messages.create(
+                    model="claude-sonnet-4-20250514",
+                    max_tokens=1500,
+                    messages=[{"role": "user", "content": evaluation_prompt}]
+                )
+
+                response_text = response.content[0].text.strip()
+                if "```" in response_text:
+                    response_text = response_text.split("```")[1].replace("json", "").strip()
+
+                evaluation = json.loads(response_text)
+                stats["evaluated"] += 1
+
+                is_story = evaluation.get("is_deployment_story", False)
+                quality = evaluation.get("quality_score", 0)
+
             except Exception as e:
-                stats["errors"].append(f"Storage error for {url}: {e}")
+                stats["errors"].append(f"Evaluation error for {url}: {e}")
+                continue
+
+            # Store
+            if is_story and quality >= min_quality:
+                try:
+                    record = {
+                        "url": url,
+                        "title": title,
+                        "company": evaluation.get("company"),
+                        "use_case": evaluation.get("use_case"),
+                        "is_deployment_story": True,
+                        "confidence": evaluation.get("confidence"),
+                        "quality_score": quality,
+                        "deployment_stage": evaluation.get("deployment_stage"),
+                        "content_type": evaluation.get("content_type"),
+                        "technology_stack": evaluation.get("technology_stack", []),
+                        "results": evaluation.get("results", []),
+                        "lessons_learned": evaluation.get("lessons_learned", []),
+                        "content_snippet": content[:2000],
+                    }
+                    supabase.table("deployments").upsert(record, on_conflict="url").execute()
+                    stats["stored"] += 1
+                except Exception as e:
+                    stats["errors"].append(f"Storage error for {url}: {e}")
     
     return stats
 
