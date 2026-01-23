@@ -607,14 +607,14 @@ def select_queries(num_queries: int = 3) -> list:
     ],
     timeout=600,  # Increased timeout for multiple queries
 )
-def run_pipeline(num_queries: int = 3, results_per_query: int = 10, min_quality: int = 5) -> dict:
+def run_pipeline(num_queries: int = 3, results_per_query: int = 10, min_quality: int = 3) -> dict:
     """
     Run the full pipeline with multiple diverse queries.
 
     Args:
         num_queries: Number of different queries to run (default: 3)
         results_per_query: Max search results per query (default: 10)
-        min_quality: Minimum quality score to store (default: 5)
+        min_quality: Minimum quality score to store (default: 3)
 
     Returns:
         Aggregated stats across all queries
@@ -681,7 +681,26 @@ def run_pipeline(num_queries: int = 3, results_per_query: int = 10, min_quality:
             # Evaluate
             try:
                 content_truncated = content[:12000]
-                evaluation_prompt = f"""Analyze this content and determine if it describes a real-world AI/LLM deployment.
+                evaluation_prompt = f"""Analyze this content and determine if it describes a practical AI/ML deployment experience or implementation story.
+
+INCLUDE content that:
+- Describes real production, pilot, or POC AI/ML implementations
+- Shares lessons learned from deploying AI systems
+- Discusses technical challenges and solutions in AI deployment
+- Provides insights from building or operating AI systems
+- Covers infrastructure, scaling, or operational aspects of AI
+
+ACCEPT stories even if:
+- Metrics or results are qualitative rather than quantitative
+- It's a pilot or POC with real learnings (not just theory)
+- It focuses more on lessons learned than success metrics
+- It's about implementation challenges rather than perfect outcomes
+
+REJECT content that is:
+- Purely theoretical or conceptual (no real implementation)
+- Just announcing a product or feature (no technical depth)
+- Only about AI research (no deployment/production focus)
+- Tutorial or how-to without real-world deployment context
 
 URL: {url}
 TITLE: {title}
@@ -689,7 +708,13 @@ CONTENT:
 {content_truncated}
 
 Respond with JSON only:
-{{"is_deployment_story": bool, "confidence": 0-1, "reason": "string", "company": "string or null", "use_case": "string", "technology_stack": [], "results": [], "lessons_learned": [], "deployment_stage": "production/pilot/poc/unknown", "content_type": "blog_post/case_study/other", "quality_score": 1-10}}"""
+{{"is_deployment_story": bool, "confidence": 0-1, "reason": "string", "company": "string or null", "use_case": "string", "technology_stack": [], "results": [], "lessons_learned": [], "deployment_stage": "production/pilot/poc/unknown", "content_type": "blog_post/case_study/other", "quality_score": 1-10}}
+
+Quality scoring guide:
+- 8-10: Exceptional depth, specific metrics, multiple insights
+- 5-7: Good practical content with real learnings
+- 3-4: Basic deployment story with some useful information
+- 1-2: Minimal practical value or mostly marketing"""
 
                 response = anthropic.messages.create(
                     model="claude-sonnet-4-20250514",
