@@ -24,6 +24,51 @@ image = (
     )
 )
 
+# Search query bank for diverse content discovery
+SEARCH_QUERY_BANK = [
+    # LLM specific
+    "LLM deployment production lessons learned 2025",
+    "GPT-4 enterprise implementation case study",
+    "Claude API production deployment",
+    "open source LLM deployment production",
+    "fine-tuning LLM production challenges",
+    "LLM serving infrastructure production",
+    "prompt engineering production systems",
+
+    # RAG and retrieval
+    "RAG implementation production enterprise",
+    "vector database deployment production scale",
+    "semantic search production deployment",
+    "document AI production deployment",
+
+    # Industry specific
+    "AI deployment healthcare case study",
+    "machine learning fintech production",
+    "recommendation system e-commerce scale",
+    "computer vision manufacturing deployment",
+    "NLP production deployment enterprise",
+
+    # Technical challenges
+    "AI model monitoring production",
+    "LLM cost optimization production",
+    "ML inference latency optimization",
+    "model serving infrastructure production",
+    "AI reliability production deployment",
+
+    # Specific use cases
+    "chatbot deployment enterprise lessons",
+    "AI code assistant production deployment",
+    "fraud detection ML production",
+    "AI agent deployment production",
+
+    # Scaling & operations
+    "scaling machine learning production 2026",
+    "MLOps best practices production",
+    "AI infrastructure production case study",
+    "model performance production monitoring",
+    "multimodal AI deployment production",
+]
+
 
 @app.function(
     image=image,
@@ -541,6 +586,17 @@ def get_deployments(min_quality: int = 5, limit: int = 50) -> dict:
         return {"success": False, "error": str(e), "deployments": []}
 
 
+def select_queries(num_queries: int = 3) -> list:
+    """
+    Select random queries from the search query bank.
+    Uses simple random selection for diversity.
+    """
+    import random
+
+    # Return up to num_queries random queries
+    return random.sample(SEARCH_QUERY_BANK, min(num_queries, len(SEARCH_QUERY_BANK)))
+
+
 @app.function(
     image=image,
     secrets=[
@@ -549,33 +605,62 @@ def get_deployments(min_quality: int = 5, limit: int = 50) -> dict:
         modal.Secret.from_name("anthropic-secret"),
         modal.Secret.from_name("supabase-secret"),
     ],
-    timeout=300,
+    timeout=600,  # Increased timeout for multiple queries
 )
-def run_pipeline(query: str = "LLM deployment case study production", max_results: int = 2) -> dict:
-    """Run the full pipeline: search → fetch → evaluate → store."""
+def run_pipeline(num_queries: int = 3, results_per_query: int = 10, min_quality: int = 5) -> dict:
+    """
+    Run the full pipeline with multiple diverse queries.
+
+    Args:
+        num_queries: Number of different queries to run (default: 3)
+        results_per_query: Max search results per query (default: 10)
+        min_quality: Minimum quality score to store (default: 5)
+
+    Returns:
+        Aggregated stats across all queries
+    """
     from tavily import TavilyClient
     from firecrawl import Firecrawl
     from anthropic import Anthropic
     from supabase import create_client
     import os
-    
-    stats = {"searched": 0, "fetched": 0, "evaluated": 0, "stored": 0, "errors": []}
-    
+
+    stats = {
+        "queries_executed": 0,
+        "searched": 0,
+        "fetched": 0,
+        "evaluated": 0,
+        "stored": 0,
+        "errors": [],
+        "queries_used": []
+    }
+
     tavily = TavilyClient(api_key=os.environ["TAVILY_API_KEY"])
     firecrawl = Firecrawl(api_key=os.environ["FIRECRAWL_API_KEY"])
     anthropic = Anthropic()
     supabase = create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_KEY"])
-    
-    # Search
-    try:
-        search_response = tavily.search(query=query, search_depth="advanced", max_results=max_results)
-        search_results = search_response.get("results", [])
-        stats["searched"] = len(search_results)
-    except Exception as e:
-        stats["errors"].append(f"Search error: {e}")
-        return stats
-    
-    for item in search_results:
+
+    # Select diverse queries
+    queries = select_queries(num_queries)
+    print(f"Selected {len(queries)} queries to execute")
+
+    # Process each query
+    for query in queries:
+        print(f"\nProcessing query: {query}")
+        stats["queries_used"].append(query)
+        stats["queries_executed"] += 1
+
+        # Search
+        try:
+            search_response = tavily.search(query=query, search_depth="advanced", max_results=results_per_query)
+            search_results = search_response.get("results", [])
+            stats["searched"] += len(search_results)
+            print(f"Found {len(search_results)} results")
+        except Exception as e:
+            stats["errors"].append(f"Search error for '{query}': {e}")
+            continue
+
+        for item in search_results:
         url = item.get("url", "")
         title = item.get("title", "")
         
@@ -627,7 +712,7 @@ Respond with JSON only:
             continue
         
         # Store
-        if is_story and quality >= 5:
+        if is_story and quality >= min_quality:
             try:
                 record = {
                     "url": url,
