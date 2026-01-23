@@ -13,11 +13,15 @@ from datetime import datetime
 
 app = modal.App("ai-deployment-intel")
 
-image = modal.Image.debian_slim(python_version="3.11").pip_install(
-    "anthropic>=0.40.0",
-    "tavily-python>=0.5.0",
-    "firecrawl>=1.0.0",
-    "supabase>=2.0.0",
+image = (
+    modal.Image.debian_slim(python_version="3.11")
+    .apt_install("git")
+    .pip_install(
+        "anthropic>=0.40.0",
+        "tavily-python>=0.5.0",
+        "firecrawl>=1.0.0",
+        "supabase>=2.0.0",
+    )
 )
 
 
