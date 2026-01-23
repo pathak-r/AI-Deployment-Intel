@@ -3,45 +3,217 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Deployment Intel - Coming Soon</title>
+    <title>AI Deployment Intel - Real-World AI Case Studies</title>
+    <meta name="description" content="Curated collection of real-world AI and LLM deployment case studies, lessons learned, and production insights.">
     <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
             background: #0f0f0f;
             color: #e0e0e0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            line-height: 1.6;
             min-height: 100vh;
-            margin: 0;
         }
+        
         .container {
-            text-align: center;
-            max-width: 600px;
-            padding: 2rem;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 2rem 1rem;
         }
+        
+        header {
+            text-align: center;
+            margin-bottom: 3rem;
+            padding-bottom: 2rem;
+            border-bottom: 1px solid #2a2a2a;
+        }
+        
         h1 {
             font-size: 2.5rem;
-            margin-bottom: 1rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
         }
-        p {
+        
+        .subtitle {
             color: #888;
             font-size: 1.1rem;
-            line-height: 1.6;
+        }
+        
+        .stats {
+            margin-top: 1rem;
+            font-size: 0.9rem;
+            color: #666;
+        }
+        
+        .card {
+            background: #1a1a1a;
+            border: 1px solid #2a2a2a;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            transition: border-color 0.2s;
+        }
+        
+        .card:hover {
+            border-color: #667eea;
+        }
+        
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.75rem;
+        }
+        
+        .company {
+            font-weight: 600;
+            color: #667eea;
+        }
+        
+        .quality {
+            font-size: 0.85rem;
+            color: #888;
+            background: #252525;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+        }
+        
+        .card h2 {
+            font-size: 1.25rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .card h2 a {
+            color: #fff;
+            text-decoration: none;
+        }
+        
+        .card h2 a:hover {
+            color: #667eea;
+        }
+        
+        .use-case {
+            color: #aaa;
+            margin-bottom: 1rem;
+        }
+        
+        .results {
+            background: #151515;
+            border-left: 3px solid #4ade80;
+            padding: 0.75rem 1rem;
+            margin-bottom: 1rem;
+            list-style: none;
+        }
+        
+        .results li {
+            color: #4ade80;
+            font-size: 0.95rem;
+            padding: 0.25rem 0;
+        }
+        
+        .results li::before {
+            content: "✓ ";
+        }
+        
+        .lesson {
+            font-style: italic;
+            color: #f59e0b;
+            font-size: 0.95rem;
+            margin-bottom: 1rem;
+        }
+        
+        .tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+        
+        .tag {
+            font-size: 0.8rem;
+            padding: 0.25rem 0.75rem;
+            background: #252525;
+            border-radius: 20px;
+            color: #888;
+        }
+        
+        .tag.stage {
+            background: #1e3a5f;
+            color: #60a5fa;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+            color: #666;
+        }
+        
+        footer {
+            text-align: center;
+            margin-top: 3rem;
+            padding-top: 2rem;
+            border-top: 1px solid #2a2a2a;
+            color: #666;
+            font-size: 0.9rem;
+        }
+        
+        footer a {
+            color: #667eea;
+            text-decoration: none;
+        }
+        
+        @media (max-width: 600px) {
+            h1 {
+                font-size: 1.75rem;
+            }
+            
+            .card {
+                padding: 1rem;
+            }
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>🤖 AI Deployment Intel</h1>
-        <p>Curated AI deployment case studies coming soon...</p>
-        <p style="margin-top: 2rem; font-size: 0.9rem;">
-            <a href="https://github.com/pathak-r/ai-deployment-intel" style="color: #667eea; text-decoration: none;">View on GitHub</a>
-        </p>
+        <header>
+            <h1>🤖 AI Deployment Intel</h1>
+            <p class="subtitle">Real-world AI deployment case studies and lessons learned</p>
+            <p class="stats">1 stories • Updated January 23, 2026</p>
+        </header>
+        
+        <main>
+            
+        <article class="card">
+            <div class="card-header">
+                <span class="company">Fuzzy Labs</span>
+                <span class="quality">Score: 8/10</span>
+            </div>
+            <h2><a href="https://www.youtube.com/watch?v=nPn42_EXB5U" target="_blank" rel="noopener">Lessons learned from scaling large language models in production - YouTube</a></h2>
+            <p class="use-case">Self-hosted LLM stack to help developers navigate complex technical documentation and provide better tooling for a customer's developer community.</p>
+            
+            <p class="lesson">💡 GPU constraints make LLM scaling feel like going back 10 years in terms of throughput and latency</p>
+            <div class="tags">
+                <span class="tag">Mistral 7B</span><span class="tag">FastAPI</span><span class="tag">Hugging Face inference pipeline</span><span class="tag">Kubernetes</span><span class="tag">ChromaDB</span>
+                <span class="tag stage">production</span>
+            </div>
+        </article>
+        
+        </main>
+        
+        <footer>
+            <p>Curated by an AI agent • Data sourced from engineering blogs and case studies</p>
+            <p style="margin-top: 0.5rem;">
+                <a href="https://github.com/pathak-r/ai-deployment-intel" target="_blank">View on GitHub</a>
+            </p>
+        </footer>
     </div>
 </body>
 </html>
