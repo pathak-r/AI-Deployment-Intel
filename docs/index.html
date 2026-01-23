@@ -186,7 +186,7 @@
         <header>
             <h1>🤖 AI Deployment Intel</h1>
             <p class="subtitle">Real-world AI deployment case studies and lessons learned</p>
-            <p class="stats">2 stories • Updated January 23, 2026</p>
+            <p class="stats">10 stories • Updated January 23, 2026</p>
         </header>
         
         <main>
@@ -217,6 +217,126 @@
             <p class="lesson">💡 Two-stage recommendation pipelines combining retrieval and ranking models are effective</p>
             <div class="tags">
                 <span class="tag">Machine learning algorithms</span><span class="tag">Collaborative filtering</span><span class="tag">Content-based filtering</span><span class="tag">Matrix factorization</span><span class="tag">Neural networks</span>
+                <span class="tag stage">production</span>
+            </div>
+        </article>
+        
+        <article class="card">
+            <div class="card-header">
+                <span class="company">Unknown Company</span>
+                <span class="quality">Score: 8/10</span>
+            </div>
+            <h2><a href="https://medium.com/@adnanmasood/deploying-llms-in-production-lessons-from-the-trenches-a742767be721" target="_blank" rel="noopener">Deploying LLMs in Production: Lessons from the Trenches | by Adnan Masood, PhD. | Medium</a></h2>
+            <p class="use-case">Large Language Model deployment in production</p>
+            <ul class="results"><li>Cost bills spiraling to tens of thousands per month without proper management</li><li>Smaller fine-tuned models outperforming larger generalist models</li></ul>
+            <p class="lesson">💡 Cost must be treated as primary design constraint, not afterthought</p>
+            <div class="tags">
+                <span class="tag">Large Language Models</span><span class="tag">model quantization</span><span class="tag">caching systems</span><span class="tag">tiered architectures</span>
+                <span class="tag stage">production</span>
+            </div>
+        </article>
+        
+        <article class="card">
+            <div class="card-header">
+                <span class="company">Inria Bordeaux University</span>
+                <span class="quality">Score: 7/10</span>
+            </div>
+            <h2><a href="https://arxiv.org/html/2409.14887v4" target="_blank" rel="noopener">Deploying Open-Source Large Language Models: A performance Analysis Preprint version</a></h2>
+            <p class="use-case">Providing secure, confidential alternative to proprietary LLM solutions for students and researchers, addressing data privacy concerns with ChatGPT usage</p>
+            <ul class="results"><li>Progressive load testing with simultaneous requests</li><li>Measured token generation speed (100 tokens per request)</li><li>Memory load analysis</li></ul>
+            <p class="lesson">💡 Quantization to 4-6 bits provides acceptable performance with reduced VRAM requirements</p>
+            <div class="tags">
+                <span class="tag">vLLM</span><span class="tag">Python 3.9+</span><span class="tag">CUDA 12</span><span class="tag">NVIDIA V100 16GB</span><span class="tag">NVIDIA A100 40GB</span>
+                <span class="tag stage">pilot</span>
+            </div>
+        </article>
+        
+        <article class="card">
+            <div class="card-header">
+                <span class="company">Unknown Company</span>
+                <span class="quality">Score: 7/10</span>
+            </div>
+            <h2><a href="https://dev.to/aws-builders/from-coffee-products-to-ai-search-building-a-serverless-semantic-search-architecture-with-amazon-5g5b" target="_blank" rel="noopener">From Coffee Products to AI Search: Building a Serverless Semantic Search Architecture with Amazon S3...</a></h2>
+            <p class="use-case">Semantic search for coffee products using natural language queries combined with metadata filtering</p>
+            <ul class="results"><li>Successfully implemented serverless semantic search architecture</li><li>Deployed functional Streamlit application on AWS Elastic Beanstalk</li><li>Processed coffee product dataset with 1,024-dimensional vectors</li></ul>
+            <p class="lesson">💡 S3 Vectors provides good balance between scalability, operational simplicity, and cost for vector storage</p>
+            <div class="tags">
+                <span class="tag">Amazon S3 Vectors</span><span class="tag">Amazon Bedrock</span><span class="tag">Amazon Titan Text Embeddings V2</span><span class="tag">Amazon Glue</span><span class="tag">AWS Elastic Beanstalk</span>
+                <span class="tag stage">poc</span>
+            </div>
+        </article>
+        
+        <article class="card">
+            <div class="card-header">
+                <span class="company">Unknown Company</span>
+                <span class="quality">Score: 7/10</span>
+            </div>
+            <h2><a href="https://home.mlops.community/public/blogs/how-to-build-your-first-semantic-search-system-my-step-by-step-guide-with-code" target="_blank" rel="noopener">How to Build Your First Semantic Search System: My Step-by-Step Guide with Code - Blog | MLOps Commu...</a></h2>
+            <p class="use-case">Semantic search system for research papers and abstracts</p>
+            <ul class="results"><li>Successfully processed 10,000 research paper abstracts</li><li>Embedding cost: $2.232 for 22,315,570 tokens</li><li>System returns top 5 most relevant results for queries</li></ul>
+            <p class="lesson">💡 Need to calculate max_length of database columns beforehand to avoid runtime errors</p>
+            <div class="tags">
+                <span class="tag">Milvus-lite vector database</span><span class="tag">Cohere Embed v3.0</span><span class="tag">IVF_FLAT indexing</span><span class="tag">Python</span><span class="tag">PyMilvus</span>
+                <span class="tag stage">poc</span>
+            </div>
+        </article>
+        
+        <article class="card">
+            <div class="card-header">
+                <span class="company">Unknown Company</span>
+                <span class="quality">Score: 7/10</span>
+            </div>
+            <h2><a href="https://medium.com/@mahartha.gemilang/mastering-modern-deployment-a-deep-dive-into-versioning-with-semantic-release-and-scalable-a939e9ebab7f" target="_blank" rel="noopener">Mastering Modern Deployment: A Deep Dive into Versioning with Semantic Release and Scalable Deployme...</a></h2>
+            <p class="use-case">Modern deployment pipeline with automated versioning and scalable containerized deployments</p>
+            <ul class="results"><li>Reduced final image size through multi-stage builds</li><li>Cost efficiency via pay-per-use serverless model</li><li>Automated environment-specific deployments</li></ul>
+            <p class="lesson">💡 Multi-stage Docker builds significantly reduce image size and improve security</p>
+            <div class="tags">
+                <span class="tag">Google Cloud Run</span><span class="tag">Docker</span><span class="tag">GitHub Actions</span><span class="tag">Semantic Release</span><span class="tag">Multi-stage Docker builds</span>
+                <span class="tag stage">production</span>
+            </div>
+        </article>
+        
+        <article class="card">
+            <div class="card-header">
+                <span class="company">Northflank</span>
+                <span class="quality">Score: 6/10</span>
+            </div>
+            <h2><a href="https://northflank.com/blog/open-source-llms-the-complete-developers-guide-to-deployment" target="_blank" rel="noopener">Open source LLMs: The complete developer's guide to choosing and deploying LLMs | Blog — Northflank</a></h2>
+            <p class="use-case">Open source LLM deployment and scaling</p>
+            <ul class="results"><li>250+ concurrent GPUs</li><li>500,000+ inference runs daily</li><li>Multi-cloud deployment across AWS, GCP, Azure</li></ul>
+            <p class="lesson">💡 Infrastructure complexity is the main blocker for production LLM deployment</p>
+            <div class="tags">
+                <span class="tag">vLLM</span><span class="tag">TGI</span><span class="tag">Docker</span><span class="tag">CUDA</span><span class="tag">Kubernetes</span>
+                <span class="tag stage">production</span>
+            </div>
+        </article>
+        
+        <article class="card">
+            <div class="card-header">
+                <span class="company">Palantir</span>
+                <span class="quality">Score: 6/10</span>
+            </div>
+            <h2><a href="https://blog.palantir.com/building-with-palantir-aip-semantic-search-dc3adf40f6a6" target="_blank" rel="noopener">Building with Palantir AIP: Semantic Search | by Palantir | Palantir Blog</a></h2>
+            <p class="use-case">semantic search application for trouble ticket systems</p>
+            <ul class="results"><li>Complete semantic search application built in minutes</li><li>Ability to search based on meaning rather than keywords</li><li>Integration with existing cloud data platforms without data duplication</li></ul>
+            <p class="lesson">💡 Virtual Tables enable quick data connectivity without duplication</p>
+            <div class="tags">
+                <span class="tag">Palantir AIP</span><span class="tag">Virtual Tables</span><span class="tag">BigQuery</span><span class="tag">OpenAI ada embedding model</span><span class="tag">Apache Spark</span>
+                <span class="tag stage">production</span>
+            </div>
+        </article>
+        
+        <article class="card">
+            <div class="card-header">
+                <span class="company">Adobe</span>
+                <span class="quality">Score: 5/10</span>
+            </div>
+            <h2><a href="https://aws.amazon.com/video/watch/5f480d62227/" target="_blank" rel="noopener">Building Production-Ready Semantic Search Applications - AWS</a></h2>
+            <p class="use-case">E-commerce product catalog enrichment using semantic search and RAG</p>
+            
+            <p class="lesson">💡 Importance of having a flexible platform to experiment with different approaches as generative AI applications evolve</p>
+            <div class="tags">
+                <span class="tag">Elasticsearch Relevance Engine</span><span class="tag">AWS Amazon Bedrock</span><span class="tag">Vector search</span><span class="tag">Domain-specific language models</span>
                 <span class="tag stage">production</span>
             </div>
         </article>
