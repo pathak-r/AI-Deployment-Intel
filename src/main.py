@@ -316,25 +316,25 @@ def generate_html(deployments: list) -> str:
         
         body {{
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
-            background: #0f0f0f;
-            color: #e0e0e0;
+            background: #fbfbfb;
+            color: #37352f;
             line-height: 1.6;
             min-height: 100vh;
         }}
-        
+
         .container {{
             max-width: 900px;
             margin: 0 auto;
             padding: 2rem 1rem;
         }}
-        
+
         header {{
             text-align: center;
             margin-bottom: 3rem;
             padding-bottom: 2rem;
-            border-bottom: 1px solid #2a2a2a;
+            border-bottom: 1px solid #e9e9e7;
         }}
-        
+
         h1 {{
             font-size: 2.5rem;
             font-weight: 700;
@@ -344,129 +344,136 @@ def generate_html(deployments: list) -> str:
             -webkit-text-fill-color: transparent;
             background-clip: text;
         }}
-        
+
         .subtitle {{
-            color: #888;
+            color: #787774;
             font-size: 1.1rem;
         }}
-        
+
         .stats {{
             margin-top: 1rem;
             font-size: 0.9rem;
-            color: #666;
+            color: #9b9a97;
         }}
-        
+
         .card {{
-            background: #1a1a1a;
-            border: 1px solid #2a2a2a;
-            border-radius: 12px;
+            background: #ffffff;
+            border: 1px solid #e9e9e7;
+            border-radius: 8px;
             padding: 1.5rem;
             margin-bottom: 1.5rem;
-            transition: border-color 0.2s;
+            transition: all 0.2s ease;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
         }}
-        
+
         .card:hover {{
             border-color: #667eea;
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.1);
         }}
-        
+
         .card-header {{
             display: flex;
             justify-content: space-between;
             align-items: center;
             margin-bottom: 0.75rem;
         }}
-        
+
         .company {{
             font-weight: 600;
             color: #667eea;
         }}
-        
+
         .quality {{
             font-size: 0.85rem;
-            color: #888;
-            background: #252525;
+            color: #787774;
+            background: #f7f6f3;
             padding: 0.25rem 0.75rem;
             border-radius: 20px;
         }}
-        
+
         .card h2 {{
             font-size: 1.25rem;
             margin-bottom: 0.5rem;
         }}
-        
+
         .card h2 a {{
-            color: #fff;
+            color: #37352f;
             text-decoration: none;
         }}
-        
+
         .card h2 a:hover {{
             color: #667eea;
         }}
-        
+
         .use-case {{
-            color: #aaa;
+            color: #787774;
             margin-bottom: 1rem;
         }}
-        
+
         .results {{
-            background: #151515;
+            background: #f0fdf4;
             border-left: 3px solid #4ade80;
             padding: 0.75rem 1rem;
             margin-bottom: 1rem;
             list-style: none;
+            border-radius: 4px;
         }}
-        
+
         .results li {{
-            color: #4ade80;
+            color: #16a34a;
             font-size: 0.95rem;
             padding: 0.25rem 0;
         }}
-        
+
         .results li::before {{
             content: "✓ ";
         }}
-        
+
         .lesson {{
             font-style: italic;
             color: #f59e0b;
             font-size: 0.95rem;
             margin-bottom: 1rem;
+            background: #fffbeb;
+            padding: 0.75rem 1rem;
+            border-radius: 4px;
+            border-left: 3px solid #fbbf24;
         }}
-        
+
         .tags {{
             display: flex;
             flex-wrap: wrap;
             gap: 0.5rem;
         }}
-        
+
         .tag {{
             font-size: 0.8rem;
             padding: 0.25rem 0.75rem;
-            background: #252525;
+            background: #f7f6f3;
             border-radius: 20px;
-            color: #888;
+            color: #787774;
         }}
-        
+
         .tag.stage {{
-            background: #1e3a5f;
-            color: #60a5fa;
+            background: #dbeafe;
+            color: #2563eb;
         }}
-        
+
         .empty-state {{
             text-align: center;
             padding: 4rem 2rem;
-            color: #666;
+            color: #9b9a97;
         }}
-        
+
         footer {{
             text-align: center;
             margin-top: 3rem;
             padding-top: 2rem;
-            border-top: 1px solid #2a2a2a;
-            color: #666;
+            border-top: 1px solid #e9e9e7;
+            color: #9b9a97;
             font-size: 0.9rem;
         }}
-        
+
         footer a {{
             color: #667eea;
             text-decoration: none;
